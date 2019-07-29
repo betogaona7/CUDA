@@ -7,21 +7,19 @@
 
 // Function definitions 
 void apply_gaussian_blur(const uchar4 * const h_inputImageRGBA, uchar4 * const d_inputImageRGBA,
-						 uchar4* const d_outputImageRGBA,
-						 const size_t numRows, const size_t numCols,
-						 unsigned char *d_redBlurred,
-						 unsigned char *d_greenBlurred,
-						 unsigned char *d_blueBlurred,
-						 const int filterWidth);
+                         uchar4* const d_outputImageRGBA, const size_t numRows, const size_t numCols,
+                         unsigned char *d_redBlurred, 
+                         unsigned char *d_greenBlurred, 
+                         unsigned char *d_blueBlurred,
+                         const int filterWidth);
 
 void allocateMemoryAndCopyToGPU(const size_t numRowsImage, const size_t numColsImage,
                                 const float* const h_filter, const size_t filterWidth);
 
-
 int main(int argc, char *argv[]){
 
 	uchar4 *h_inputImage, *d_inputImage; 
-	uchar4 *h_outputImage, *d_output_Image;
+	uchar4 *h_outputImage, *d_outputImage;
 	unsigned char *d_redBlurred, *d_greenBlurred, *d_blueBlurred;
 
 	float *h_filter;
@@ -45,7 +43,7 @@ int main(int argc, char *argv[]){
 	}
 
 	// Load image
-	preProcess(&h_inputImage, &h_outputImage, &d_inputImage, &d_output_Image, 
+	preProcess(&h_inputImage, &h_outputImage, &d_inputImage, &d_outputImage, 
 			   &d_redBlurred, &d_greenBlurred, &d_blueBlurred,
 			   &h_filter, &filterWidth, in_file);
 
@@ -55,22 +53,20 @@ int main(int argc, char *argv[]){
 	timer.Start();
 
 	// Calling my kernel
-	apply_gaussian_blur(h_inputImage, d_inputImage, d_output_Image, numRows(), numCols(),
+	apply_gaussian_blur(h_inputImage, d_inputImage, d_outputImage, numRows(), numCols(),
 						d_redBlurred, d_greenBlurred, d_blueBlurred, filterWidth);
-
-
 
 	timer.Stop();
 	cudaDeviceSynchronize();
 
 	int err = printf("Finished in %f msec.\n", timer.Elapsed());
 	if(err < 0){
-		std::cerr << "Couldn't print timing information." << std:: endl;
+		std::cerr << "Couldn't print timing information." << std::endl;
 	}
 
 	// Transfer results from GPU to CPU.
 	size_t numPixels = numRows() * numCols();
-	checkCudaErrors(cudaMemcpy(h_outputImage, d_output_Image, sizeof(uchar4) * numPixels, cudaMemcpyDeviceToHost));
+	checkCudaErrors(cudaMemcpy(h_outputImage, d_outputImage, sizeof(uchar4) * numPixels, cudaMemcpyDeviceToHost));
 
 	// Save image
 	postProcess(out_file, h_outputImage);
@@ -80,7 +76,7 @@ int main(int argc, char *argv[]){
   	checkCudaErrors(cudaFree(d_blueBlurred));
   	
 	// Clean
-	cleanup();
+	cleanUp();
 
 	return 0;
 }

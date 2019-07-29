@@ -4,6 +4,7 @@ __global__ void gaussian_blur(const unsigned char* const inputChannel,
                               unsigned char* const outputChannel,
                               int numRows, int numCols,
                               const float* const filter, const int filterWidth){
+  
   const int2 thread_2D_pos = make_int2(blockIdx.x * blockDim.x + threadIdx.x,
                                        blockIdx.y * blockDim.y + threadIdx.y);
   const int thread_1D_pos = thread_2D_pos.y * numCols + thread_2D_pos.x;
@@ -12,12 +13,15 @@ __global__ void gaussian_blur(const unsigned char* const inputChannel,
     return;
 
   float result = 0.0f;
-  for(int r = -filterWidth/2; r <= filterWidth/2; ++r){
-    for (int c = -filterWidth/2; c <= filterWidth/2; ++c){
-        int row = min(max(0, thread_2D_pos.y + r), numRows - 1);
-        int col = min(max(0, thread_2D_pos.x + c), numCols - 1);
-        int pixel = row * numCols + col;
-        result += float(filter[(r + filterWidth/2) * filterWidth + (col + filterWidth/2)] * inputChannel[pixel]);
+  for(int r = 0; r < filterWidth; ++r){
+    for (int c = 0; c < filterWidth; ++c){
+      int col = thread_2D_pos.x + c - filterWidth/2;
+      int row = thread_2D_pos.y + r - filterWidth/2;
+
+      col = min(max(col, 0), numCols - 1);
+      row = min(max(row, 0), numRows - 1);
+
+      result += filter[r * filterWidth + c] * static_cast<float>(inputChannel[row * numCols + col]);
     }
   }
   outputChannel[thread_1D_pos] = result;
@@ -97,10 +101,10 @@ void apply_gaussian_blur(const uchar4 * const h_inputImageRGBA, uchar4 * const d
                          const int filterWidth){
 
   const dim3 blockSize(16, 16);
-  const dim3 gridSize(numCols/blockSize.x +1, numRows/blockSize.y + 1);
+  const dim3 gridSize(numCols/blockSize.x + 1, numRows/blockSize.y + 1);
 
   // Launch a kernel for separating the RGBA images
-  separateChannels<<<gridSize, blockSize>>>(d_inputImageRGBA, numRows, numCols, d_red, d_green, d_blue);
+  separateChannels<<<gridSize, blockSize>>>(d_inputImageRGBA, d_red, d_green, d_blue, numRows, numCols);
   cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
 
   // Call convolution kernel three times, once for each color channel.

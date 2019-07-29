@@ -19,7 +19,7 @@ size_t numRows(){
 }
 
 size_t numCols(){
-	return imageOutput.cols;
+	return imageInput.cols;
 }
 
 void preProcess(uchar4 **h_inputImage, uchar4 **h_outputImage, 
@@ -42,10 +42,10 @@ void preProcess(uchar4 **h_inputImage, uchar4 **h_outputImage,
 	}
 
 	// Change color from BGR to RGBA
-	cv::cvtColor(image, imageRGBA, CV_BGR2RGBA);
+	cv::cvtColor(image, imageInput, CV_BGR2RGBA);
 
 	// Allocate memory for the output 
-	imageInput.create(image.rows, image.cols, CV_8UC4);
+	imageOutput.create(image.rows, image.cols, CV_8UC4);
 
 	*h_inputImage  = (uchar4 *)imageInput.ptr<unsigned char>(0);
 	*h_outputImage = (uchar4 *)imageOutput.ptr<unsigned char>(0);
@@ -97,7 +97,7 @@ void preProcess(uchar4 **h_inputImage, uchar4 **h_outputImage,
   	checkCudaErrors(cudaMemset(*d_blueBlurred,  0, sizeof(unsigned char) * numPixels));
 }
 
-void postProcess(const std::string &output_file, unsigned char *data_ptr){
+void postProcess(const std::string &output_file, uchar4 *data_ptr){
 	// Create output image
 	cv::Mat output(numRows(), numCols(), CV_8UC4, (void*)data_ptr);
 	cv::Mat imageOutputBGR;
@@ -106,7 +106,8 @@ void postProcess(const std::string &output_file, unsigned char *data_ptr){
 	cv::imwrite(output_file.c_str(), imageOutputBGR);
 }
 
-void cleanup(){
+void cleanUp(){
 	cudaFree(d_inputImage__);
 	cudaFree(d_outputImage__);
+	delete[] h_filter__;
 }
